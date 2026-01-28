@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Happy Birthday!</title>
+<style>
+    body { margin: 0; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
+    canvas { display: block; }
+    #overlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        display: flex; justify-content: center; align-items: center;
+        background: radial-gradient(circle, #1a1a1a 0%, #000 100%); z-index: 10; cursor: pointer;
+    }
+    #start-btn {
+        padding: 25px 50px; font-size: 28px; color: #fff; border: none; border-radius: 50px; 
+        background: linear-gradient(45deg, #ff00bd, #ffbd00);
+        box-shadow: 0 0 30px rgba(255, 0, 189, 0.6); cursor: pointer; animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+</style>
+</head>
+<body>
+
+<div id="overlay"><button id="start-btn">Click me♥</button></div>
+<canvas id="canvas"></canvas>
+
+<audio id="music" loop>
+    <source src="music.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const music = document.getElementById("music");
+const overlay = document.getElementById("overlay");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const textStr = "HAPPY BIRTHDAY BUMMMM♥"; 
+let fireworks = [];
+let letters = [];
+let particles = [];
+let currentIndex = 0;
+
+overlay.addEventListener('click', () => {
+    overlay.style.display = 'none';
+    music.play();
+    startShow();
+});
+
+class Firework {
+    constructor(charIndex = null) {
+        this.charIndex = charIndex;
+        this.x = Math.random() * canvas.width;
+        this.y = canvas.height;
+        this.color = `hsl(${Math.random() * 360}, 100%, 70%)`;
+        
+        if (charIndex !== null) {
+            const spacing = 45;
+            const lineHeight = 80;
+            
+            const isSecondLine = charIndex >= 15; 
+            
+            if (!isSecondLine) {
+                const firstLineLength = 14; 
+                const startX = (canvas.width / 2) - ((firstLineLength - 1) * spacing / 2);
+                this.tx = startX + charIndex * spacing;
+                this.ty = canvas.height / 2 - 50; 
+            } else {
+                const secondLinePart = "BUMMMM♥";
+                const startX = (canvas.width / 2) - ((secondLinePart.length - 1) * spacing / 2);
+                this.tx = startX + (charIndex - 15) * spacing;
+                this.ty = canvas.height / 2 + lineHeight - 50;
+            }
+            this.speed = 8;
+        } else {
+            this.tx = Math.random() * canvas.width;
+            this.ty = Math.random() * (canvas.height * 0.5);
+            this.speed = Math.random() * 4 + 7;
+        }
+    }
+
+    update() {
+        this.y -= this.speed;
+        this.x += (this.tx - this.x) * 0.05;
+        drawCircle(this.x, this.y, 2.5, this.color);
+
+        if (this.y <= this.ty) {
+            if (this.charIndex !== null) {
+                letters.push(new Letter(this.x, this.y, this.tx, this.ty, textStr[this.charIndex]));
+                if (this.charIndex === textStr.length - 1) {
+                    launchGrandFinale();
+                }
+            }
+            explode(this.x, this.y, this.color);
+            return false;
+        }
+        return true;
+    }
+}
+
+class Letter {
+    constructor(x, y, tx, ty, char) {
+        this.x = x; this.y = y; this.tx = tx; this.ty = ty;
+        this.char = char; this.bounce = Math.random() * 10;
+    }
+    update() {
+        this.x += (this.tx - this.x) * 0.1;
+        this.y += (this.ty - this.y) * 0.1;
+        this.bounce += 0.08;
+        ctx.save();
+        ctx.font = "bold 50px Arial";
+        ctx.textAlign = "center";
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = "gold";
+        ctx.fillStyle = "#FFF";
+        ctx.fillText(this.char, this.x, this.y + Math.sin(this.bounce) * 8);
+        ctx.restore();
+    }
+}
+
+class Particle {
+    constructor(x, y, color) {
+        this.x = x; this.y = y;
+        this.angle = Math.random() * Math.PI * 2;
+        this.speed = Math.random() * 8 + 2;
+        this.life = Math.random() * 30 + 30;
+        this.color = color;
+    }
+    update() {
+        this.x += Math.cos(this.angle) * this.speed;
+        this.y += Math.sin(this.angle) * this.speed;
+        this.speed *= 0.96;
+        this.life--;
+        drawCircle(this.x, this.y, 1.8, this.color);
+        return this.life > 0;
+    }
+}
+
+function explode(x, y, color) {
+    for (let i = 0; i < 70; i++) particles.push(new Particle(x, y, color));
+}
+
+function drawCircle(x, y, r, color) {
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+}
+
+function animate() {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    fireworks = fireworks.filter(f => f.update());
+    particles = particles.filter(p => p.update());
+    letters.forEach(l => l.update());
+    requestAnimationFrame(animate);
+}
+
+function startShow() {
+    const launchInterval = setInterval(() => {
+        for (let i = 0; i < 3; i++) {
+            if (currentIndex < textStr.length) {
+                if (textStr[currentIndex] === " ") {
+                    currentIndex++;
+                    i--;
+                    continue;
+                }
+                fireworks.push(new Firework(currentIndex));
+                currentIndex++;
+            } else {
+                clearInterval(launchInterval);
+                break;
+            }
+        }
+    }, 800); 
+}
+
+function launchGrandFinale() {
+    setInterval(() => {
+        const shots = Math.floor(Math.random() * 8) + 10;
+        for(let j=0; j<shots; j++) {
+            setTimeout(() => {
+                fireworks.push(new Firework());
+            }, Math.random() * 600);
+        }
+    }, 800);
+}
+
+animate();
+
+window.addEventListener('resize', () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+});
+</script>
+
+</body>
+</html>
