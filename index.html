@@ -6,22 +6,99 @@
 <style>
     body { margin: 0; background: #000; overflow: hidden; font-family: 'Arial Black', sans-serif; }
     canvas { display: block; }
+    
     #overlay {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         display: flex; justify-content: center; align-items: center;
-        background: radial-gradient(circle, #1a1a1a 0%, #000 100%); z-index: 10; cursor: pointer;
+        background: radial-gradient(circle, #1a1a1a 0%, #000 100%); z-index: 100; cursor: pointer;
     }
     #start-btn {
         padding: 25px 50px; font-size: 28px; color: #fff; border: none; border-radius: 50px; 
         background: linear-gradient(45deg, #ff00bd, #ffbd00);
         box-shadow: 0 0 30px rgba(255, 0, 189, 0.6); cursor: pointer; animation: pulse 1.5s infinite;
     }
+
+    #next-btn {
+        position: fixed; bottom: 50px; left: 50%; transform: translateX(-50%);
+        padding: 15px 40px; font-size: 20px; color: #fff; border: none; border-radius: 30px;
+        background: linear-gradient(45deg, #ff00bd, #ff5e00);
+        cursor: pointer; 
+        display: none; 
+        z-index: 50;
+        box-shadow: 0 0 20px rgba(255, 0, 189, 0.5);
+        animation: appearNextBtn 1s ease-out forwards, glowBtn 2s infinite;
+    }
+
+    @keyframes appearNextBtn {
+        0% { opacity: 0; bottom: 0px; transform: translateX(-50%) scale(0.5); }
+        70% { transform: translateX(-50%) scale(1.1); }
+        100% { opacity: 1; bottom: 50px; transform: translateX(-50%) scale(1); }
+    }
+
+    @keyframes glowBtn {
+        0% { box-shadow: 0 0 10px rgba(255, 0, 189, 0.5); }
+        50% { box-shadow: 0 0 30px rgba(255, 0, 189, 0.9), 0 0 50px rgba(255, 94, 0, 0.4); }
+        100% { box-shadow: 0 0 10px rgba(255, 0, 189, 0.5); }
+    }
+
+    #letter-box {
+        position: fixed; top: 50%; left: 50%; 
+        transform: translate(-50%, -50%) scale(0.5); 
+        opacity: 0;
+        width: 80%; max-width: 500px; min-height: 300px;
+        background: #fdfcf0;
+        padding: 40px; border-radius: 15px;
+        box-shadow: 0 10px 50px rgba(0,0,0,0.8), inset 0 0 100px rgba(0,0,0,0.05);
+        z-index: 80; 
+        border: 1px solid #d4d4d4;
+        pointer-events: none;
+        transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s ease;
+    }
+
+    #letter-box.active { 
+        transform: translate(-50%, -50%) scale(1); 
+        opacity: 1; 
+        pointer-events: auto;
+    }
+    
+    #close-btn {
+        position: absolute; top: 15px; right: 20px;
+        font-size: 24px; color: #999; cursor: pointer;
+        font-family: Arial, sans-serif; transition: color 0.3s;
+        z-index: 90;
+    }
+    #close-btn:hover { color: #ff00bd; }
+    
+    .letter-text {
+        font-family: 'Comic Sans MS', 'Chalkboard SE', cursive;
+        color: #333; font-size: 22px; line-height: 1.6; text-align: center;
+        margin-top: 10px;
+    }
+    
+    .paper-lines {
+        background-image: linear-gradient(#e1e1e1 1px, transparent 1px);
+        background-size: 100% 2em; line-height: 2em;
+    }
+
     @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
 </style>
 </head>
 <body>
 
 <div id="overlay"><button id="start-btn">Surprise!</button></div>
+<button id="next-btn">กดเพื่อดูข้อความสุดพิเศษ✨</button>
+
+<div id="letter-box">
+    <span id="close-btn">✖</span>
+    <div class="letter-text paper-lines">
+        ถึง บั๋มมมมม<br>
+        สุขสันต์วันเกิดนะะ! ขอให้มีความสุขมากๆ <br>
+        ยิ้มเยอะๆ ในทุกๆวันนน <br>
+        สมหวังในทุกเรื่องที่ตั้งใจไว้เลยนะะะ <br>
+        ขอบคุณที่ยังอยู่ด้วยกันน้าา♥
+    </div>
+</div>
+
 <canvas id="canvas"></canvas>
 
 <audio id="music" loop>
@@ -33,8 +110,11 @@ const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 const music = document.getElementById("music");
 const overlay = document.getElementById("overlay");
-music.volume = 0.2;
+const nextBtn = document.getElementById("next-btn");
+const letterBox = document.getElementById("letter-box");
+const closeBtn = document.getElementById("close-btn");
 
+music.volume = 0.2;
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
@@ -50,6 +130,18 @@ overlay.addEventListener('click', () => {
     startShow();
 });
 
+nextBtn.addEventListener('click', () => {
+    nextBtn.style.display = 'none';
+    letterBox.classList.add('active');
+});
+
+closeBtn.addEventListener('click', () => {
+    letterBox.classList.remove('active');
+    setTimeout(() => {
+        nextBtn.style.display = 'block';
+    }, 600);
+});
+
 class Firework {
     constructor(charIndex = null) {
         this.charIndex = charIndex;
@@ -60,7 +152,6 @@ class Firework {
         if (charIndex !== null) {
             const spacing = 45;
             const lineHeight = 80;
-            
             const isSecondLine = charIndex >= 15; 
             
             if (!isSecondLine) {
@@ -92,6 +183,7 @@ class Firework {
                 letters.push(new Letter(this.x, this.y, this.tx, this.ty, textStr[this.charIndex]));
                 if (this.charIndex === textStr.length - 1) {
                     launchGrandFinale();
+                    showNextButton();
                 }
             }
             explode(this.x, this.y, this.color);
@@ -99,6 +191,12 @@ class Firework {
         }
         return true;
     }
+}
+
+function showNextButton() {
+    setTimeout(() => {
+        nextBtn.style.display = 'block';
+    }, 700);
 }
 
 class Letter {
@@ -198,7 +296,4 @@ window.addEventListener('resize', () => {
 </script>
 
 </body>
-
 </html>
-
-
